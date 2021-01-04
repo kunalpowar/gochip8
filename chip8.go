@@ -45,7 +45,7 @@ func (c *Chip8) RunOnce() {
 	c.emulator.EmulateCycle()
 
 	if c.emulator.UpdateDisplay {
-		c.display.DrawFrame(c.emulator.Display)
+		c.updateDisplay()
 	}
 
 	c.setKeys()
@@ -73,4 +73,20 @@ func (c *Chip8) setKeys() {
 			c.emulator.Keys[i] = 0
 		}
 	}
+}
+
+func (c *Chip8) updateDisplay() {
+	for y, rowData := range c.emulator.Display {
+		for x := 0; x < 64; x++ {
+			if rowData&((0x1<<63)>>x) == 0 {
+				c.display.ClearPixel(x, y)
+				// img.Set(x, y, color.Black)
+			} else {
+				c.display.SetPixel(x, y)
+				// img.Set(x, y, color.White)
+			}
+		}
+	}
+
+	c.display.DrawFrame()
 }

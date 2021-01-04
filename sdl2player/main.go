@@ -15,23 +15,26 @@ type sdlDisplay struct {
 	window *sdl.Window
 }
 
-func (w sdlDisplay) DrawFrame(data [32]uint64) {
-	surface, err := w.window.GetSurface()
+func (d sdlDisplay) DrawFrame() {
+	d.window.UpdateSurface()
+}
+
+func (d sdlDisplay) ClearPixel(x, y int) {
+	surface, err := d.window.GetSurface()
 	if err != nil {
 		panic(err)
 	}
 
-	for y, rowData := range data {
-		for x := 0; x < 64; x++ {
-			if rowData&((0x1<<63)>>x) == 0 {
-				surface.Set(x, y, color.Black)
-			} else {
-				surface.Set(x, y, color.White)
-			}
-		}
+	surface.Set(x, y, color.Black)
+}
+
+func (d sdlDisplay) SetPixel(x, y int) {
+	surface, err := d.window.GetSurface()
+	if err != nil {
+		panic(err)
 	}
 
-	w.window.UpdateSurface()
+	surface.Set(x, y, color.White)
 }
 
 type sdlKeyboard struct {

@@ -16,7 +16,7 @@ var rom = flag.String("rom", "roms/Chip8 Picture.ch8", "-rom path_to_rom")
 func main() {
 	flag.Parse()
 
-	var d GIFDisplay
+	d := GIFDisplay{currentFrame: newPalettedImage()}
 	c := chip8.New(&d, nil, nil)
 
 	f, err := os.Open(*rom)
@@ -45,23 +45,30 @@ func main() {
 type GIFDisplay struct {
 	images []*image.Paletted
 	delays []int
+
+	currentFrame *image.Paletted
 }
 
-func (d *GIFDisplay) DrawFrame(data [32]uint64) {
+func newPalettedImage() *image.Paletted {
 	palette := []color.Color{color.White, color.Black}
 	rect := image.Rect(0, 0, 64, 32)
+	return image.NewPaletted(rect, palette)
+}
 
-	img := image.NewPaletted(rect, palette)
-	for y, rowData := range data {
-		for x := 0; x < 64; x++ {
-			if rowData&((0x1<<63)>>x) == 0 {
-				img.Set(x, y, color.Black)
-			} else {
-				img.Set(x, y, color.White)
-			}
-		}
+func (d *GIFDisplay) DrawFrame() {
+	if d.currentFrame == nil {
+		return
 	}
 
-	d.images = append(d.images, img)
+	d.images = append(d.images, d.currentFrame)
 	d.delays = append(d.delays, 0)
+	d.currentFrame = newPalettedImage()
+}
+
+func (d *GIFDisplay) ClearPixel(x, y int) {
+	d.currentFrame.Set(x, y, color.Black)
+}
+
+func (d *GIFDisplay) SetPixel(x, y int) {
+	d.currentFrame.Set(x, y, color.White)
 }
