@@ -11,6 +11,12 @@ import (
 	"github.com/veandco/go-sdl2/sdl"
 )
 
+const (
+	displayScale = 10
+	c8DispWidth  = 64
+	c8DispHeight = 32
+)
+
 type sdlDisplay struct {
 	window *sdl.Window
 }
@@ -25,7 +31,13 @@ func (d sdlDisplay) ClearPixel(x, y int) {
 		panic(err)
 	}
 
-	surface.Set(x, y, color.Black)
+	x = x * displayScale
+	y = y * displayScale
+	for row := 0; row < displayScale; row++ {
+		for col := 0; col < displayScale; col++ {
+			surface.Set(x+col, y+row, color.Black)
+		}
+	}
 }
 
 func (d sdlDisplay) SetPixel(x, y int) {
@@ -34,7 +46,13 @@ func (d sdlDisplay) SetPixel(x, y int) {
 		panic(err)
 	}
 
-	surface.Set(x, y, color.White)
+	x = x * displayScale
+	y = y * displayScale
+	for row := 0; row < displayScale; row++ {
+		for col := 0; col < displayScale; col++ {
+			surface.Set(x+col, y+row, color.White)
+		}
+	}
 }
 
 type sdlKeyboard struct {
@@ -73,12 +91,6 @@ func (s sdlKeyboard) PressedKeys() map[int]bool {
 
 var rom = flag.String("rom", "roms/Chip8 Picture.ch8", "-rom path_to_rom")
 
-const (
-	displayScale = 2
-	c8DispWidth  = 64
-	c8DispHeight = 32
-)
-
 func main() {
 	flag.Parse()
 	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
@@ -86,11 +98,22 @@ func main() {
 	}
 	defer sdl.Quit()
 
-	window, err := sdl.CreateWindow("test", sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, c8DispWidth, c8DispHeight, sdl.WINDOW_SHOWN)
+	window, err := sdl.CreateWindow(
+		"test",
+		sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED,
+		c8DispWidth*displayScale, c8DispHeight*displayScale,
+		sdl.WINDOW_SHOWN)
 	if err != nil {
 		panic(err)
 	}
 	defer window.Destroy()
+
+	surface, err := window.GetSurface()
+	if err != nil {
+		panic(err)
+	}
+	surface.FillRect(nil, 0)
+	window.UpdateSurface()
 
 	kb := sdlKeyboard{pressedKeys: make(map[int]bool)}
 	c := chip8.New(sdlDisplay{window: window}, &kb, nil)
@@ -103,7 +126,7 @@ func main() {
 	defer f.Close()
 	c.LoadROM(f)
 
-	ticker := time.NewTicker(5 * time.Millisecond)
+	ticker := time.NewTicker(1 * time.Millisecond)
 
 	running := true
 	for range ticker.C {
