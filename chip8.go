@@ -7,6 +7,8 @@ import (
 	"github.com/kunalpowar/gochip8/emulator"
 )
 
+// Chip8 packages all the intefaces and the emulator itself.
+// Use New(...) to create a instance.
 type Chip8 struct {
 	emulator *emulator.Emulator
 	display  Display
@@ -14,6 +16,7 @@ type Chip8 struct {
 	speaker  Speaker
 }
 
+// New creates and initialises the emulator and all the interfaces.
 func New(disp Display, kb Keyboard, sp Speaker) *Chip8 {
 	if disp == nil {
 		log.Fatalf("chip8: need a non-empty display")
@@ -22,6 +25,7 @@ func New(disp Display, kb Keyboard, sp Speaker) *Chip8 {
 	return &Chip8{emulator: emulator.New(), display: disp, keyboard: kb, speaker: sp}
 }
 
+// LoadROM loads the bytes from reader into chip8 RAM
 func (c *Chip8) LoadROM(r io.Reader) {
 	c.emulator.LoadROM(r)
 }
@@ -44,7 +48,7 @@ func (c *Chip8) RunOnce() {
 		c.display.DrawFrame(c.emulator.Display)
 	}
 
-	c.SetKeys()
+	c.setKeys()
 
 	if c.speaker != nil {
 		if c.emulator.Beep {
@@ -56,7 +60,7 @@ func (c *Chip8) RunOnce() {
 
 }
 
-func (c *Chip8) SetKeys() {
+func (c *Chip8) setKeys() {
 	if c.keyboard == nil {
 		return
 	}
