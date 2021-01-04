@@ -1,14 +1,10 @@
 package emulator
 
 import (
-	"image"
-	"image/color"
-	"image/gif"
 	"io"
 	"io/ioutil"
 	"log"
 	"math/rand"
-	"os"
 	"time"
 )
 
@@ -67,9 +63,10 @@ type Emulator struct {
 	Stack [16]uint16
 
 	Display [32]uint64
-	Key     [16]uint8
+	Keys    [16]uint8
 
-	displayUpdated bool
+	// UpdateDisplay is set if display frame needs to be updated.
+	UpdateDisplay bool
 }
 
 // New returns a new instance of emulator ready to load programs
@@ -96,49 +93,6 @@ func (e *Emulator) LoadROM(r io.Reader) {
 	log.Printf("emulator: loaded %d bytes of rom into memory", len(bs))
 }
 
-// Run runs the emulator
-func (e *Emulator) Run() {
-	palette := []color.Color{color.White, color.Black}
-	rect := image.Rect(0, 0, 64, 32)
-
-	var (
-		images []*image.Paletted
-		delays []int
-	)
-
-	for i := 0; i < 1000; i++ {
-		e.displayUpdated = false
-		e.emulateCycle()
-		e.updateTimers()
-
-		if e.displayUpdated {
-			img := image.NewPaletted(rect, palette)
-			for y, rowData := range e.Display {
-				for x := 0; x < 64; x++ {
-					if rowData&((0x1<<63)>>x) == 0 {
-						img.Set(x, y, color.Black)
-					} else {
-						img.Set(x, y, color.White)
-					}
-				}
-			}
-
-			images = append(images, img)
-			delays = append(delays, 0)
-		}
-	}
-
-	out, err := os.Create("out.gif")
-	if err != nil {
-		log.Fatalf("could not create gif: %v", err)
-	}
-	defer out.Close()
-
-	if err := gif.EncodeAll(out, &gif.GIF{Image: images, Delay: delays}); err != nil {
-		log.Fatalf("could not encode to gif: %v", err)
-	}
-}
-
 func (e *Emulator) updateTimers() {
 	if e.DT > 0 {
 		e.DT--
@@ -154,7 +108,7 @@ func (e *Emulator) clearDisplay() {
 	for i := range e.Display {
 		e.Display[i] = 0x00
 	}
-	e.displayUpdated = true
+	e.UpdateDisplay = true
 }
 
 func (e *Emulator) togglePixel(x, y int) {
@@ -165,7 +119,7 @@ func (e *Emulator) getPixel(x, y int) int {
 	return int(e.Display[y] & ((0x1 << 63) >> x))
 }
 
-func (e *Emulator) emulateCycle() {
+func (e *Emulator) EmulateCycle() {
 	var opcode uint16
 	opcode = uint16(e.RAM[e.PC])<<8 | uint16(e.RAM[e.PC+1])
 
@@ -331,20 +285,20 @@ func (e *Emulator) emulateCycle() {
 				}
 			}
 		}
-		e.displayUpdated = true
+		e.UpdateDisplay = true
 		e.PC += 2
 	case 0xe000:
 		switch kk {
 		case 0x009e:
 			log.Print("Skip next instruction if key with the value of Vx is pressed.")
-			if e.Key[e.V[x]] > 0 {
+			if e.Keys[e.V[x]] > 0 {
 				e.PC += 4
 			} else {
 				e.PC += 2
 			}
 		case 0x00a1:
 			log.Print("Skip next instruction if key with the value of Vx is not pressed.")
-			if e.Key[e.V[x]] == 0 {
+			if e.Keys[e.V[x]] == 0 {
 				e.PC += 4
 			} else {
 				e.PC += 2
@@ -369,7 +323,7 @@ func (e *Emulator) emulateCycle() {
 			ticker := time.NewTicker(10 * time.Millisecond)
 			for range ticker.C {
 				keyPressed := -1
-				for i, k := range e.Key {
+				for i, k := range e.Keys {
 					if k > 0 {
 						log.Printf("got key press: %d", i)
 						keyPressed = i
@@ -470,6 +424,8 @@ func (e *Emulator) emulateCycle() {
 	default:
 		log.Fatalf("unrecognised opcode")
 	}
+
+	e.updateTimers()
 }
 
 func cicularShiftLeftUint8(in uint8, shiftBy int) uint8 {
