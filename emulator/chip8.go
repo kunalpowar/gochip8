@@ -39,31 +39,33 @@ var fontSet = []uint8{
 
 // Emulator for chip8
 type Emulator struct {
-	RAM [4096]uint8
+	ram [4096]uint8
 
 	// 16 general purpose 8 bit registers
-	V [16]uint8
+	v [16]uint8
 
-	// 16 bit I register used to store memory address
+	// 16 bit i register used to store memory address
 	// Only the lowest 12 bits are used
-	I uint16
+	i uint16
 
-	// DT is a delay timer
-	DT uint8
+	// dt is a delay timer
+	dt uint8
 
-	// ST is a sound timer
-	ST uint8
+	// st is a sound timer
+	st uint8
 
-	// PC is a 16 bit program counter
-	PC uint16
+	// pc is a 16 bit program counter
+	pc uint16
 
-	// SP is a 8 bit stackpointer
-	SP uint8
+	// sp is a 8 bit stackpointer
+	sp uint8
 
-	Stack [16]uint16
+	stack [16]uint16
 
+	// Display holds the data abotu current display state
 	Display [32]uint64
-	Keys    [16]uint8
+
+	keys [16]uint8
 
 	// UpdateDisplay is set if display frame needs to be updated.
 	UpdateDisplay bool
@@ -71,9 +73,9 @@ type Emulator struct {
 
 // New returns a new instance of emulator ready to load programs
 func New() *Emulator {
-	e := Emulator{PC: programStart}
+	e := Emulator{pc: programStart}
 	for i, b := range fontSet {
-		e.RAM[interpreterStart+i] = b
+		e.ram[interpreterStart+i] = b
 	}
 
 	return &e
@@ -87,20 +89,20 @@ func (e *Emulator) LoadROM(r io.Reader) {
 	}
 
 	for i, b := range bs {
-		e.RAM[programStart+i] = b
+		e.ram[programStart+i] = b
 	}
 
 	log.Printf("emulator: loaded %d bytes of rom into memory", len(bs))
 }
 
 func (e *Emulator) updateTimers() {
-	if e.DT > 0 {
-		e.DT--
+	if e.dt > 0 {
+		e.dt--
 	}
 
-	if e.ST > 0 {
+	if e.st > 0 {
 		print("beep..")
-		e.ST--
+		e.st--
 	}
 }
 
@@ -119,9 +121,10 @@ func (e *Emulator) getPixel(x, y int) int {
 	return int(e.Display[y] & ((0x1 << 63) >> x))
 }
 
+// EmulateCycle runs the next opcode and updates the timers accordingly
 func (e *Emulator) EmulateCycle() {
 	var opcode uint16
-	opcode = uint16(e.RAM[e.PC])<<8 | uint16(e.RAM[e.PC+1])
+	opcode = uint16(e.ram[e.pc])<<8 | uint16(e.ram[e.pc+1])
 
 	// nnn or addr - A 12-bit value, the lowest 12 bits of the instruction
 	// n or nibble - A 4-bit value, the lowest 4 bits of the instruction
@@ -136,7 +139,7 @@ func (e *Emulator) EmulateCycle() {
 		kk  = opcode & 0x00ff
 	)
 
-	log.Printf("opcode: %04x, PC: %04x", opcode, e.PC)
+	log.Printf("opcode: %04x, PC: %04x", opcode, e.pc)
 
 	switch opcode & 0xf000 {
 	case 0x0000:
@@ -144,164 +147,164 @@ func (e *Emulator) EmulateCycle() {
 		case 0x00e0:
 			log.Print("clear display")
 			e.clearDisplay()
-			e.PC += 2
+			e.pc += 2
 		case 0x00EE:
 			log.Print("Return from a subroutine")
-			e.PC = e.Stack[e.SP]
-			e.SP--
+			e.pc = e.stack[e.sp]
+			e.sp--
 		}
 	case 0x1000:
 		log.Printf("Jump to location nnn:%x.", nnn)
-		e.PC = nnn
+		e.pc = nnn
 	case 0x2000:
 		log.Printf("Call subroutine at nnn:%x", nnn)
-		e.SP++
-		e.Stack[e.SP] = e.PC + 2
-		e.PC = nnn
+		e.sp++
+		e.stack[e.sp] = e.pc + 2
+		e.pc = nnn
 	case 0x3000:
-		log.Printf("Skip next instruction if Vx(%x) = kk(%x).", e.V[x], kk)
-		if uint16(e.V[x]) == kk {
-			e.PC += 4
+		log.Printf("Skip next instruction if Vx(%x) = kk(%x).", e.v[x], kk)
+		if uint16(e.v[x]) == kk {
+			e.pc += 4
 		} else {
-			e.PC += 2
+			e.pc += 2
 		}
 	case 0x4000:
-		log.Printf("Skip next instruction if Vx(%x) ! kk(%x).", e.V[x], kk)
-		if uint16(e.V[x]) != kk {
-			e.PC += 4
+		log.Printf("Skip next instruction if Vx(%x) ! kk(%x).", e.v[x], kk)
+		if uint16(e.v[x]) != kk {
+			e.pc += 4
 		} else {
-			e.PC += 2
+			e.pc += 2
 		}
 	case 0x5000:
-		log.Printf("Skip next instruction if Vx(%x) = Vy(%x).", e.V[x], e.V[y])
-		if e.V[x] == e.V[y] {
-			e.PC += 4
+		log.Printf("Skip next instruction if Vx(%x) = Vy(%x).", e.v[x], e.v[y])
+		if e.v[x] == e.v[y] {
+			e.pc += 4
 		} else {
-			e.PC += 2
+			e.pc += 2
 		}
 	case 0x6000:
-		log.Printf("Set Vx(%x) = kk(%x).", e.V[x], kk)
-		e.V[x] = uint8(kk)
-		log.Printf("e.V[x]: %d %04x", e.V[x], e.V[x])
-		e.PC += 2
+		log.Printf("Set Vx(%x) = kk(%x).", e.v[x], kk)
+		e.v[x] = uint8(kk)
+		log.Printf("e.V[x]: %d %04x", e.v[x], e.v[x])
+		e.pc += 2
 	case 0x7000:
-		log.Printf("Set Vx (%d) = Vx + kk(%d).", e.V[x], kk)
-		e.V[x] += uint8(kk)
-		log.Printf("e.V[x]: %d %04x", e.V[x], e.V[x])
-		e.PC += 2
+		log.Printf("Set Vx (%d) = Vx + kk(%d).", e.v[x], kk)
+		e.v[x] += uint8(kk)
+		log.Printf("e.V[x]: %d %04x", e.v[x], e.v[x])
+		e.pc += 2
 	case 0x8000:
 		switch n {
 		case 0x0000:
 			log.Print("Set Vx = Vy.")
-			e.V[x] = e.V[y]
-			log.Printf("e.V[x]: %d %04x", e.V[x], e.V[x])
+			e.v[x] = e.v[y]
+			log.Printf("e.V[x]: %d %04x", e.v[x], e.v[x])
 		case 0x0001:
 			log.Print("Set Vx = Vx OR Vy.")
-			e.V[x] |= e.V[y]
+			e.v[x] |= e.v[y]
 		case 0x0002:
 			log.Print("Set Vx = Vx AND Vy.")
-			e.V[x] &= e.V[y]
+			e.v[x] &= e.v[y]
 		case 0x0003:
 			log.Print("Set Vx = Vx XOR Vy.")
-			e.V[x] ^= e.V[y]
+			e.v[x] ^= e.v[y]
 		case 0x0004:
 			log.Print("Set Vx = Vx + Vy, set VF = carry")
-			if int(e.V[x])+int(e.V[y]) > 255 {
-				e.V[0xF] = 1
+			if int(e.v[x])+int(e.v[y]) > 255 {
+				e.v[0xF] = 1
 			} else {
-				e.V[0xF] = 0
+				e.v[0xF] = 0
 			}
-			e.V[x] += e.V[y]
-			log.Printf("e.V[x]: %d %04x", e.V[x], e.V[x])
+			e.v[x] += e.v[y]
+			log.Printf("e.V[x]: %d %04x", e.v[x], e.v[x])
 		case 0x0005:
 			log.Printf("Set Vx = Vx - Vy, set VF = NOT borrow.")
-			if e.V[x] > e.V[y] {
-				e.V[0xF] = 1
+			if e.v[x] > e.v[y] {
+				e.v[0xF] = 1
 			} else {
-				e.V[0xF] = 0
+				e.v[0xF] = 0
 			}
-			e.V[x] -= e.V[y]
-			log.Printf("e.V[x]: %d %04x", e.V[x], e.V[x])
+			e.v[x] -= e.v[y]
+			log.Printf("e.V[x]: %d %04x", e.v[x], e.v[x])
 		case 0x0006:
 			log.Print("Set Vx = Vx SHR 1.")
-			e.V[0xF] = e.V[x] & 0x1
-			e.V[x] >>= 1
-			log.Printf("e.V[x]: %d %04x", e.V[x], e.V[x])
+			e.v[0xF] = e.v[x] & 0x1
+			e.v[x] >>= 1
+			log.Printf("e.V[x]: %d %04x", e.v[x], e.v[x])
 		case 0x0007:
 			log.Print("Set Vx = Vy - Vx, set VF = NOT borrow.")
-			if e.V[y] > e.V[x] {
-				e.V[0xF] = 1
+			if e.v[y] > e.v[x] {
+				e.v[0xF] = 1
 			} else {
-				e.V[0xF] = 0
+				e.v[0xF] = 0
 			}
-			e.V[x] = e.V[y] - e.V[x]
-			log.Printf("e.V[x]: %d %04x", e.V[x], e.V[x])
+			e.v[x] = e.v[y] - e.v[x]
+			log.Printf("e.V[x]: %d %04x", e.v[x], e.v[x])
 		case 0x000E:
 			log.Print("Set Vx = Vx SHL 1.")
-			e.V[0xF] = (e.V[x] >> 7) & 0x1
-			e.V[x] <<= 1
-			log.Printf("e.V[x]: %d %04x", e.V[x], e.V[x])
+			e.v[0xF] = (e.v[x] >> 7) & 0x1
+			e.v[x] <<= 1
+			log.Printf("e.V[x]: %d %04x", e.v[x], e.v[x])
 		}
-		e.PC += 2
+		e.pc += 2
 	case 0x9000:
 		log.Print("Skip next instruction if Vx != Vy.")
 		if n == 0x0 {
-			if e.V[x] != e.V[y] {
-				e.PC += 4
+			if e.v[x] != e.v[y] {
+				e.pc += 4
 			} else {
-				e.PC += 2
+				e.pc += 2
 			}
 		}
 	case 0xa000:
 		log.Print("Set I = nnn.")
-		e.I = nnn
-		e.PC += 2
+		e.i = nnn
+		e.pc += 2
 	case 0xb000:
 		log.Print("Jump to location nnn + V0")
-		e.PC = nnn + uint16(e.V[0])
+		e.pc = nnn + uint16(e.v[0])
 	case 0xc000:
 		log.Print("Set Vx = random byte AND kk.")
-		e.V[x] = uint8(rand.Intn(255)) & uint8(kk)
-		log.Printf("e.V[x]: %d %04x", e.V[x], e.V[x])
-		e.PC += 2
+		e.v[x] = uint8(rand.Intn(255)) & uint8(kk)
+		log.Printf("e.V[x]: %d %04x", e.v[x], e.v[x])
+		e.pc += 2
 	case 0xd000:
-		log.Printf("Display n(%d)-byte sprite starting at memory location I(%d) at (Vx:%d, Vy:%d), set VF = collision.", n, e.I, e.V[x], e.V[y])
+		log.Printf("Display n(%d)-byte sprite starting at memory location I(%d) at (Vx:%d, Vy:%d), set VF = collision.", n, e.i, e.v[x], e.v[y])
 
-		e.V[0xF] = 0
+		e.v[0xF] = 0
 		for row := 0; row < int(n); row++ {
-			y := int(e.V[y]) + row
-			bt := e.RAM[int(e.I)+row]
+			y := int(e.v[y]) + row
+			bt := e.ram[int(e.i)+row]
 			log.Printf("byte: %08b", bt)
 
 			for col := 0; col < 8; col++ {
-				x := int(e.V[x]) + col
+				x := int(e.v[x]) + col
 
 				pix := e.getPixel(x, y)
 				if bt&(0x80>>col) != 0 {
 					e.togglePixel(x, y)
 					if pix != 0 {
-						e.V[0xF] = 1
+						e.v[0xF] = 1
 					}
 				}
 			}
 		}
 		e.UpdateDisplay = true
-		e.PC += 2
+		e.pc += 2
 	case 0xe000:
 		switch kk {
 		case 0x009e:
 			log.Print("Skip next instruction if key with the value of Vx is pressed.")
-			if e.Keys[e.V[x]] > 0 {
-				e.PC += 4
+			if e.keys[e.v[x]] > 0 {
+				e.pc += 4
 			} else {
-				e.PC += 2
+				e.pc += 2
 			}
 		case 0x00a1:
 			log.Print("Skip next instruction if key with the value of Vx is not pressed.")
-			if e.Keys[e.V[x]] == 0 {
-				e.PC += 4
+			if e.keys[e.v[x]] == 0 {
+				e.pc += 4
 			} else {
-				e.PC += 2
+				e.pc += 2
 			}
 		}
 	case 0xf000:
@@ -311,9 +314,9 @@ func (e *Emulator) EmulateCycle() {
 		// The value of DT is placed into Vx.
 		case 0x0007:
 			log.Print("Set Vx = delay timer value.")
-			e.V[x] = e.DT
-			log.Printf("e.V[x]: %d %04x", e.V[x], e.V[x])
-			e.PC += 2
+			e.v[x] = e.dt
+			log.Printf("e.V[x]: %d %04x", e.v[x], e.v[x])
+			e.pc += 2
 
 		// Fx0A - LD Vx, K
 		// Wait for a key press, store the value of the key in Vx.
@@ -323,7 +326,7 @@ func (e *Emulator) EmulateCycle() {
 			ticker := time.NewTicker(10 * time.Millisecond)
 			for range ticker.C {
 				keyPressed := -1
-				for i, k := range e.Keys {
+				for i, k := range e.keys {
 					if k > 0 {
 						log.Printf("got key press: %d", i)
 						keyPressed = i
@@ -335,66 +338,66 @@ func (e *Emulator) EmulateCycle() {
 					continue
 				}
 
-				e.V[x] = uint8(keyPressed)
-				log.Printf("e.V[x]: %d %04x", e.V[x], e.V[x])
+				e.v[x] = uint8(keyPressed)
+				log.Printf("e.V[x]: %d %04x", e.v[x], e.v[x])
 				ticker.Stop()
 				break
 			}
 
-			e.PC += 2
+			e.pc += 2
 
 		// Fx15 - LD DT, Vx
 		// Set delay timer = Vx.
 		// DT is set equal to the value of Vx.
 		case 0x0015:
-			e.DT = e.V[x]
-			e.PC += 2
+			e.dt = e.v[x]
+			e.pc += 2
 
 		// Fx18 - LD ST, Vx
 		// Set sound timer = Vx.
 		// ST is set equal to the value of Vx.
 		case 0x0018:
-			e.ST = e.V[x]
-			e.PC += 2
+			e.st = e.v[x]
+			e.pc += 2
 
 		// Fx1E - ADD I, Vx
 		// Set I = I + Vx.
 		// The values of I and Vx are added, and the results are stored in I.
 		case 0x001e:
-			if int(e.I)+int(e.V[x]) > 255 {
-				e.V[0xf] = 1
+			if int(e.i)+int(e.v[x]) > 255 {
+				e.v[0xf] = 1
 			} else {
-				e.V[0xf] = 0
+				e.v[0xf] = 0
 			}
-			e.I += uint16(e.V[x])
-			e.PC += 2
+			e.i += uint16(e.v[x])
+			e.pc += 2
 
 		// Fx29 - LD F, Vx
 		// Set I = location of sprite for digit Vx.
 		// The value of I is set to the location for the hexadecimal sprite corresponding to the value of Vx. See section 2.4, Display, for more information on the Chip-8 hexadecimal font.
 		case 0x0029:
-			e.I = uint16(bytesPerCharacter) * uint16(e.V[x])
-			e.PC += 2
+			e.i = uint16(bytesPerCharacter) * uint16(e.v[x])
+			e.pc += 2
 
 		// Fx33 - LD B, Vx
 		// Store BCD representation of Vx in memory locations I, I+1, and I+2.
 		// The interpreter takes the decimal value of Vx, and places the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2.
 		case 0x0033:
-			intVal := int(e.V[x])
+			intVal := int(e.v[x])
 			if intVal > 100 {
-				e.RAM[e.I] = uint8((intVal % 1000) / 100)
-				e.RAM[e.I+1] = uint8((intVal % 100) / 10)
-				e.RAM[e.I+2] = uint8(intVal % 10)
+				e.ram[e.i] = uint8((intVal % 1000) / 100)
+				e.ram[e.i+1] = uint8((intVal % 100) / 10)
+				e.ram[e.i+2] = uint8(intVal % 10)
 			} else if intVal > 10 {
-				e.RAM[e.I] = 0
-				e.RAM[e.I+1] = uint8((intVal % 100) / 10)
-				e.RAM[e.I+2] = uint8(intVal % 10)
+				e.ram[e.i] = 0
+				e.ram[e.i+1] = uint8((intVal % 100) / 10)
+				e.ram[e.i+2] = uint8(intVal % 10)
 			} else {
-				e.RAM[e.I] = 0
-				e.RAM[e.I+1] = 0
-				e.RAM[e.I+2] = uint8(intVal)
+				e.ram[e.i] = 0
+				e.ram[e.i+1] = 0
+				e.ram[e.i+2] = uint8(intVal)
 			}
-			e.PC += 2
+			e.pc += 2
 
 		// Fx55 - LD [I], Vx
 		// Store registers V0 through Vx in memory starting at location I.
@@ -402,10 +405,10 @@ func (e *Emulator) EmulateCycle() {
 		case 0x0055:
 			var i uint16
 			for i = 0; i < x; i++ {
-				e.RAM[e.I+i] = e.V[i]
+				e.ram[e.i+i] = e.v[i]
 			}
-			e.I += x + 1
-			e.PC += 2
+			e.i += x + 1
+			e.pc += 2
 
 		// Fx65 - LD Vx, [I]
 		// Read registers V0 through Vx from memory starting at location I.
@@ -413,10 +416,10 @@ func (e *Emulator) EmulateCycle() {
 		case 0x0065:
 			var i uint16
 			for i = 0; i < x; i++ {
-				e.V[i] = e.RAM[e.I+i]
+				e.v[i] = e.ram[e.i+i]
 			}
-			e.I += x + 1
-			e.PC += 2
+			e.i += x + 1
+			e.pc += 2
 		default:
 			log.Fatalf("unknown opcode")
 		}
