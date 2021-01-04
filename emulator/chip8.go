@@ -192,7 +192,6 @@ func Run(r io.Reader) {
 }
 
 func (e *Emulator) clearDisplay() {
-	// TODO: draw here
 	for i := range e.Display {
 		e.Display[i] = 0x00
 	}
@@ -246,12 +245,10 @@ func (e *Emulator) runNextOp() {
 	case 0x2000:
 		log.Printf("Call subroutine at nnn:%x", nnn)
 		e.SP++
-		// TODO: Check this +2 thing
 		e.Stack[e.SP] = e.PC + 2
 		e.PC = nnn
 	case 0x3000:
 		log.Printf("Skip next instruction if Vx(%x) = kk(%x).", e.V[x], kk)
-		// TODO: investigate based on documentation
 		if uint16(e.V[x]) == kk {
 			e.PC += 4
 		} else {
@@ -259,7 +256,6 @@ func (e *Emulator) runNextOp() {
 		}
 	case 0x4000:
 		log.Printf("Skip next instruction if Vx(%x) ! kk(%x).", e.V[x], kk)
-		// TODO: investigate based on documentation
 		if uint16(e.V[x]) != kk {
 			e.PC += 4
 		} else {
@@ -377,18 +373,7 @@ func (e *Emulator) runNextOp() {
 					}
 				}
 			}
-
-			// bt64 := uint64(e.RAM[e.I+row])
-			// bt64 = cicularShiftLeftUint64(bt64, 64-8-int(e.V[x]))
-			// original := e.Display[row]
-			// e.Display[y] ^= bt64
-			// if e.Display[y] < original {
-			// 	e.V[0xF] = 1
-			// } else {
-			// 	e.V[0xF] = 0
-			// }
 		}
-		// TODO: draw here
 		e.displayUpdated = true
 		e.PC += 2
 	case 0xe000:
