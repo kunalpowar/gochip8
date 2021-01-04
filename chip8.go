@@ -7,12 +7,14 @@ import (
 	"github.com/kunalpowar/gochip8/display"
 	"github.com/kunalpowar/gochip8/emulator"
 	"github.com/kunalpowar/gochip8/keyboard"
+	"github.com/kunalpowar/gochip8/speaker"
 )
 
 type Chip8 struct {
 	emulator *emulator.Emulator
 	display  display.Display
 	keyboard keyboard.Keyboard
+	speaker  speaker.Speaker
 }
 
 func New(disp display.Display, kb keyboard.Keyboard) *Chip8 {
@@ -45,6 +47,9 @@ func (c *Chip8) RunOnce() {
 	}
 
 	c.SetKeys()
+	if c.emulator.Beep && c.speaker != nil {
+		c.speaker.Beep()
+	}
 }
 
 func (c *Chip8) SetKeys() {

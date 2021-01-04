@@ -69,6 +69,9 @@ type Emulator struct {
 
 	// UpdateDisplay is set if display frame needs to be updated.
 	UpdateDisplay bool
+
+	// Beep when set to true
+	Beep bool
 }
 
 // New returns a new instance of emulator ready to load programs
@@ -100,8 +103,9 @@ func (e *Emulator) updateTimers() {
 		e.dt--
 	}
 
+	e.Beep = false
 	if e.st > 0 {
-		print("beep..")
+		e.Beep = true
 		e.st--
 	}
 }
