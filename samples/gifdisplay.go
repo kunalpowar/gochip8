@@ -17,7 +17,7 @@ func main() {
 	flag.Parse()
 
 	var d GIFDisplay
-	c := chip8.New(&d)
+	c := chip8.New(&d, nil)
 
 	f, err := os.Open(*rom)
 	if err != nil {

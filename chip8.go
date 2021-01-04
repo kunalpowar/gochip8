@@ -6,19 +6,21 @@ import (
 
 	"github.com/kunalpowar/gochip8/display"
 	"github.com/kunalpowar/gochip8/emulator"
+	"github.com/kunalpowar/gochip8/keyboard"
 )
 
 type Chip8 struct {
 	emulator *emulator.Emulator
 	display  display.Display
+	keyboard keyboard.Keyboard
 }
 
-func New(display display.Display) *Chip8 {
-	if display == nil {
+func New(disp display.Display, kb keyboard.Keyboard) *Chip8 {
+	if disp == nil {
 		log.Fatalf("chip8: need a non-empty display")
 	}
 
-	return &Chip8{emulator: emulator.New(), display: display}
+	return &Chip8{emulator: emulator.New(), display: disp, keyboard: kb}
 }
 
 func (c *Chip8) LoadROM(r io.Reader) {
@@ -29,16 +31,33 @@ func (c *Chip8) LoadROM(r io.Reader) {
 // Use this to test simple roms like chip8 logo.
 func (c *Chip8) RunCycles(limit int) {
 	for i := 0; i < limit; i++ {
-		c.emulator.UpdateDisplay = false
-		c.emulator.EmulateCycle()
-
-		if c.emulator.UpdateDisplay {
-			c.display.DrawFrame(c.emulator.Display)
-		}
+		c.RunOnce()
 	}
 }
 
 // RunCycles runs just 1 emulator cycle
 func (c *Chip8) RunOnce() {
-	c.RunCycles(1)
+	c.emulator.UpdateDisplay = false
+	c.emulator.EmulateCycle()
+
+	if c.emulator.UpdateDisplay {
+		c.display.DrawFrame(c.emulator.Display)
+	}
+
+	c.SetKeys()
+}
+
+func (c *Chip8) SetKeys() {
+	if c.keyboard == nil {
+		return
+	}
+
+	keys := c.keyboard.PressedKeys()
+	for i := 0; i < 16; i++ {
+		if keys[i] {
+			c.emulator.Keys[i] = 1
+		} else {
+			c.emulator.Keys[i] = 0
+		}
+	}
 }

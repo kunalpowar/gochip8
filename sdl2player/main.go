@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"log"
 	"os"
+	"time"
 
 	chip8 "github.com/kunalpowar/gochip8"
 	"github.com/veandco/go-sdl2/sdl"
@@ -33,6 +34,52 @@ func (w SDLWindow) DrawFrame(data [32]uint64) {
 	w.window.UpdateSurface()
 }
 
+type SDLKeyboard struct {
+	pressedKeys map[int]bool
+}
+
+func (s SDLKeyboard) PressedKeys() map[int]bool {
+	out := make(map[int]bool)
+	for k := range s.pressedKeys {
+		switch k {
+		case sdl.K_1:
+			out[1] = true
+		case sdl.K_2:
+			out[2] = true
+		case sdl.K_3:
+			out[3] = true
+		case sdl.K_q:
+			out[4] = true
+		case sdl.K_w:
+			out[5] = true
+		case sdl.K_e:
+			out[6] = true
+		case sdl.K_a:
+			out[7] = true
+		case sdl.K_s:
+			out[8] = true
+		case sdl.K_d:
+			out[9] = true
+		case sdl.K_z:
+			out[0xa] = true
+		case sdl.K_x:
+			out[0] = true
+		case sdl.K_c:
+			out[0xb] = true
+		case sdl.K_4:
+			out[0xc] = true
+		case sdl.K_r:
+			out[0xd] = true
+		case sdl.K_f:
+			out[0xe] = true
+		case sdl.K_v:
+			out[0xf] = true
+		}
+	}
+
+	return out
+}
+
 var rom = flag.String("rom", "roms/Chip8 Picture.ch8", "-rom path_to_rom")
 
 func main() {
@@ -55,7 +102,8 @@ func main() {
 	surface.FillRect(nil, 0)
 	window.UpdateSurface()
 
-	c := chip8.New(SDLWindow{window: window})
+	kb := SDLKeyboard{pressedKeys: make(map[int]bool)}
+	c := chip8.New(SDLWindow{window: window}, &kb)
 
 	flag.Parse()
 	f, err := os.Open(*rom)
@@ -65,15 +113,30 @@ func main() {
 	defer f.Close()
 	c.LoadROM(f)
 
+	ticker := time.NewTicker(5 * time.Millisecond)
+
 	running := true
-	for running {
+	for range ticker.C {
 		c.RunOnce()
+		if !running {
+			break
+		}
+
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
-			switch event.(type) {
+			switch e := event.(type) {
 			case *sdl.QuitEvent:
 				println("Quit")
+				ticker.Stop()
 				running = false
 				break
+
+			case *sdl.KeyboardEvent:
+				if e.Type == sdl.KEYDOWN {
+					kb.pressedKeys[int(e.Keysym.Sym)] = true
+				}
+				if e.Type == sdl.KEYUP {
+					delete(kb.pressedKeys, int(e.Keysym.Sym))
+				}
 			}
 		}
 	}

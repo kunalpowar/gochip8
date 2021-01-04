@@ -65,7 +65,7 @@ type Emulator struct {
 	// Display holds the data abotu current display state
 	Display [32]uint64
 
-	keys [16]uint8
+	Keys [16]uint8
 
 	// UpdateDisplay is set if display frame needs to be updated.
 	UpdateDisplay bool
@@ -272,13 +272,13 @@ func (e *Emulator) EmulateCycle() {
 	case 0xe000:
 		switch kk {
 		case 0x009e:
-			if e.keys[e.v[x]] > 0 {
+			if e.Keys[e.v[x]] > 0 {
 				e.pc += 4
 			} else {
 				e.pc += 2
 			}
 		case 0x00a1:
-			if e.keys[e.v[x]] == 0 {
+			if e.Keys[e.v[x]] == 0 {
 				e.pc += 4
 			} else {
 				e.pc += 2
@@ -300,7 +300,7 @@ func (e *Emulator) EmulateCycle() {
 			ticker := time.NewTicker(10 * time.Millisecond)
 			for range ticker.C {
 				keyPressed := -1
-				for i, k := range e.keys {
+				for i, k := range e.Keys {
 					if k > 0 {
 						keyPressed = i
 						break
