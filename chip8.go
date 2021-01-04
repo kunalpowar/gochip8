@@ -4,20 +4,17 @@ import (
 	"io"
 	"log"
 
-	"github.com/kunalpowar/gochip8/display"
 	"github.com/kunalpowar/gochip8/emulator"
-	"github.com/kunalpowar/gochip8/keyboard"
-	"github.com/kunalpowar/gochip8/speaker"
 )
 
 type Chip8 struct {
 	emulator *emulator.Emulator
-	display  display.Display
-	keyboard keyboard.Keyboard
-	speaker  speaker.Speaker
+	display  Display
+	keyboard Keyboard
+	speaker  Speaker
 }
 
-func New(disp display.Display, kb keyboard.Keyboard) *Chip8 {
+func New(disp Display, kb Keyboard) *Chip8 {
 	if disp == nil {
 		log.Fatalf("chip8: need a non-empty display")
 	}
@@ -47,9 +44,15 @@ func (c *Chip8) RunOnce() {
 	}
 
 	c.SetKeys()
-	if c.emulator.Beep && c.speaker != nil {
-		c.speaker.Beep()
+
+	if c.speaker != nil {
+		if c.emulator.Beep {
+			c.speaker.Beep()
+		} else {
+			c.speaker.Pause()
+		}
 	}
+
 }
 
 func (c *Chip8) SetKeys() {
