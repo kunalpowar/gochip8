@@ -11,11 +11,11 @@ import (
 	"github.com/veandco/go-sdl2/sdl"
 )
 
-type SDLWindow struct {
+type sdlDisplay struct {
 	window *sdl.Window
 }
 
-func (w SDLWindow) DrawFrame(data [32]uint64) {
+func (w sdlDisplay) DrawFrame(data [32]uint64) {
 	surface, err := w.window.GetSurface()
 	if err != nil {
 		panic(err)
@@ -34,46 +34,34 @@ func (w SDLWindow) DrawFrame(data [32]uint64) {
 	w.window.UpdateSurface()
 }
 
-type SDLKeyboard struct {
+type sdlKeyboard struct {
 	pressedKeys map[int]bool
 }
 
-func (s SDLKeyboard) PressedKeys() map[int]bool {
+var keyboardToChip8Map = map[int]int{
+	sdl.K_1: 1,
+	sdl.K_2: 2,
+	sdl.K_3: 3,
+	sdl.K_q: 4,
+	sdl.K_w: 5,
+	sdl.K_e: 6,
+	sdl.K_a: 7,
+	sdl.K_s: 8,
+	sdl.K_d: 9,
+	sdl.K_z: 0xa,
+	sdl.K_x: 0,
+	sdl.K_c: 0xb,
+	sdl.K_4: 0xc,
+	sdl.K_r: 0xd,
+	sdl.K_f: 0xe,
+	sdl.K_v: 0xf,
+}
+
+func (s sdlKeyboard) PressedKeys() map[int]bool {
 	out := make(map[int]bool)
 	for k := range s.pressedKeys {
-		switch k {
-		case sdl.K_1:
-			out[1] = true
-		case sdl.K_2:
-			out[2] = true
-		case sdl.K_3:
-			out[3] = true
-		case sdl.K_q:
-			out[4] = true
-		case sdl.K_w:
-			out[5] = true
-		case sdl.K_e:
-			out[6] = true
-		case sdl.K_a:
-			out[7] = true
-		case sdl.K_s:
-			out[8] = true
-		case sdl.K_d:
-			out[9] = true
-		case sdl.K_z:
-			out[0xa] = true
-		case sdl.K_x:
-			out[0] = true
-		case sdl.K_c:
-			out[0xb] = true
-		case sdl.K_4:
-			out[0xc] = true
-		case sdl.K_r:
-			out[0xd] = true
-		case sdl.K_f:
-			out[0xe] = true
-		case sdl.K_v:
-			out[0xf] = true
+		if outK, present := keyboardToChip8Map[k]; present {
+			out[outK] = true
 		}
 	}
 
@@ -102,8 +90,8 @@ func main() {
 	surface.FillRect(nil, 0)
 	window.UpdateSurface()
 
-	kb := SDLKeyboard{pressedKeys: make(map[int]bool)}
-	c := chip8.New(SDLWindow{window: window}, &kb, nil)
+	kb := sdlKeyboard{pressedKeys: make(map[int]bool)}
+	c := chip8.New(sdlDisplay{window: window}, &kb, nil)
 
 	flag.Parse()
 	f, err := os.Open(*rom)
