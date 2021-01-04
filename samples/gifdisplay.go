@@ -26,7 +26,7 @@ func main() {
 	defer f.Close()
 	c.LoadROM(f)
 
-	c.Start()
+	c.RunCycles(1000)
 
 	out, err := os.Create("out.gif")
 	if err != nil {
@@ -39,6 +39,9 @@ func main() {
 	}
 }
 
+// GIFDisplay creates a gif frame for every display update
+// At the end of limited cycles, a gif file will be encoded
+// with all the frames.
 type GIFDisplay struct {
 	images []*image.Paletted
 	delays []int

@@ -25,8 +25,10 @@ func (c *Chip8) LoadROM(r io.Reader) {
 	c.emulator.LoadROM(r)
 }
 
-func (c *Chip8) Start() {
-	for i := 0; i < 1000; i++ {
+// RunCycles runs the emulator for a limited set of cycles
+// Use this to test simple roms like chip8 logo.
+func (c *Chip8) RunCycles(limit int) {
+	for i := 0; i < limit; i++ {
 		c.emulator.UpdateDisplay = false
 		c.emulator.EmulateCycle()
 
