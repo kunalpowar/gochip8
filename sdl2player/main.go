@@ -55,6 +55,15 @@ func (d sdlDisplay) SetPixel(x, y int) {
 	}
 }
 
+func (d sdlDisplay) ClearAll() {
+	surface, err := d.window.GetSurface()
+	if err != nil {
+		panic(err)
+	}
+
+	surface.FillRect(nil, 0)
+}
+
 type sdlKeyboard struct {
 	pressedKeys map[int]bool
 }

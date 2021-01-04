@@ -50,7 +50,7 @@ type GIFDisplay struct {
 }
 
 func newPalettedImage() *image.Paletted {
-	palette := []color.Color{color.White, color.Black}
+	palette := []color.Color{color.Black, color.White}
 	rect := image.Rect(0, 0, 64, 32)
 	return image.NewPaletted(rect, palette)
 }
@@ -62,7 +62,16 @@ func (d *GIFDisplay) DrawFrame() {
 
 	d.images = append(d.images, d.currentFrame)
 	d.delays = append(d.delays, 0)
-	d.currentFrame = newPalettedImage()
+
+	img := newPalettedImage()
+	rect := img.Bounds()
+	for row := 0; row < rect.Dy(); row++ {
+		for col := 0; col < rect.Dx(); col++ {
+			img.Set(col, row, d.currentFrame.At(col, row))
+		}
+	}
+
+	d.currentFrame = img
 }
 
 func (d *GIFDisplay) ClearPixel(x, y int) {
@@ -71,4 +80,8 @@ func (d *GIFDisplay) ClearPixel(x, y int) {
 
 func (d *GIFDisplay) SetPixel(x, y int) {
 	d.currentFrame.Set(x, y, color.White)
+}
+
+func (d *GIFDisplay) ClearAll() {
+	d.currentFrame = newPalettedImage()
 }

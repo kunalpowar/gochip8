@@ -40,12 +40,12 @@ func (c *Chip8) RunCycles(limit int) {
 
 // RunOnce runs just 1 emulator cycle
 func (c *Chip8) RunOnce() {
-	c.emulator.UpdateDisplay = false
-
 	c.emulator.EmulateCycle()
-
 	if c.emulator.UpdateDisplay {
 		c.updateDisplay()
+	}
+	if c.emulator.ClearDisplay {
+		c.display.ClearAll()
 	}
 
 	c.setKeys()
@@ -76,16 +76,11 @@ func (c *Chip8) setKeys() {
 }
 
 func (c *Chip8) updateDisplay() {
-	for y, rowData := range c.emulator.Display {
-		for x := 0; x < 64; x++ {
-			if rowData&((0x1<<63)>>x) == 0 {
-				c.display.ClearPixel(x, y)
-				// img.Set(x, y, color.Black)
-			} else {
-				c.display.SetPixel(x, y)
-				// img.Set(x, y, color.White)
-			}
-		}
+	for _, pix := range c.emulator.ClearedPixels {
+		c.display.ClearPixel(pix.X, pix.Y)
+	}
+	for _, pix := range c.emulator.SetPixels {
+		c.display.SetPixel(pix.X, pix.Y)
 	}
 
 	c.display.DrawFrame()

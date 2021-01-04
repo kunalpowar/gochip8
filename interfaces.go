@@ -11,6 +11,9 @@ type Display interface {
 
 	// SetPixel sets the pixel at location x,y or (row,col)
 	SetPixel(x, y int)
+
+	// ClearAll should clear all the pixels
+	ClearAll()
 }
 
 // Keyboard exposes mapping to emulator defined keys

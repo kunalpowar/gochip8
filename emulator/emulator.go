@@ -62,16 +62,35 @@ type Emulator struct {
 
 	stack [16]uint16
 
-	// Display holds the data abotu current display state
-	Display [32]uint64
-
 	Keys [16]uint8
 
+	// Display holds the data abotu current display state
+	Display [32]uint64
 	// UpdateDisplay is set if display frame needs to be updated.
 	UpdateDisplay bool
 
+	// Helper flags for efficient rendering
+	ClearDisplay  bool
+	ClearedPixels []Pixel
+	SetPixels     []Pixel
+
 	// Beep when set to true
 	Beep bool
+}
+
+// Pixel represents one pixel on the 64X32 display
+type Pixel struct{ X, Y int }
+
+func overflowCorrectedPixel(x, y int) Pixel {
+	p := Pixel{X: x, Y: y}
+	if p.X >= 64 {
+		p.X = p.X % 64
+	}
+	if p.Y >= 32 {
+		p.Y = p.Y % 32
+	}
+
+	return p
 }
 
 // New returns a new instance of emulator ready to load programs
@@ -114,7 +133,9 @@ func (e *Emulator) clearDisplay() {
 	for i := range e.Display {
 		e.Display[i] = 0x00
 	}
+
 	e.UpdateDisplay = true
+	e.ClearDisplay = true
 }
 
 func (e *Emulator) togglePixel(x, y int) {
@@ -143,6 +164,11 @@ func (e *Emulator) getPixel(x, y int) int {
 func (e *Emulator) EmulateCycle() {
 	var opcode uint16
 	opcode = uint16(e.ram[e.pc])<<8 | uint16(e.ram[e.pc+1])
+
+	e.ClearedPixels = make([]Pixel, 0)
+	e.SetPixels = make([]Pixel, 0)
+	e.UpdateDisplay = false
+	e.ClearDisplay = false
 
 	// nnn or addr - A 12-bit value, the lowest 12 bits of the instruction
 	// n or nibble - A 4-bit value, the lowest 4 bits of the instruction
@@ -267,6 +293,9 @@ func (e *Emulator) EmulateCycle() {
 					e.togglePixel(x, y)
 					if pix != 0 {
 						e.v[0xF] = 1
+						e.ClearedPixels = append(e.ClearedPixels, overflowCorrectedPixel(x, y))
+					} else {
+						e.SetPixels = append(e.SetPixels, overflowCorrectedPixel(x, y))
 					}
 				}
 			}
