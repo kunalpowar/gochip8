@@ -139,115 +139,86 @@ func (e *Emulator) EmulateCycle() {
 		kk  = opcode & 0x00ff
 	)
 
-	log.Printf("opcode: %04x, PC: %04x", opcode, e.pc)
-
 	switch opcode & 0xf000 {
 	case 0x0000:
 		switch kk {
 		case 0x00e0:
-			log.Print("clear display")
 			e.clearDisplay()
 			e.pc += 2
 		case 0x00EE:
-			log.Print("Return from a subroutine")
 			e.pc = e.stack[e.sp]
 			e.sp--
 		}
 	case 0x1000:
-		log.Printf("Jump to location nnn:%x.", nnn)
 		e.pc = nnn
 	case 0x2000:
-		log.Printf("Call subroutine at nnn:%x", nnn)
 		e.sp++
 		e.stack[e.sp] = e.pc + 2
 		e.pc = nnn
 	case 0x3000:
-		log.Printf("Skip next instruction if Vx(%x) = kk(%x).", e.v[x], kk)
 		if uint16(e.v[x]) == kk {
 			e.pc += 4
 		} else {
 			e.pc += 2
 		}
 	case 0x4000:
-		log.Printf("Skip next instruction if Vx(%x) ! kk(%x).", e.v[x], kk)
 		if uint16(e.v[x]) != kk {
 			e.pc += 4
 		} else {
 			e.pc += 2
 		}
 	case 0x5000:
-		log.Printf("Skip next instruction if Vx(%x) = Vy(%x).", e.v[x], e.v[y])
 		if e.v[x] == e.v[y] {
 			e.pc += 4
 		} else {
 			e.pc += 2
 		}
 	case 0x6000:
-		log.Printf("Set Vx(%x) = kk(%x).", e.v[x], kk)
 		e.v[x] = uint8(kk)
-		log.Printf("e.V[x]: %d %04x", e.v[x], e.v[x])
 		e.pc += 2
 	case 0x7000:
-		log.Printf("Set Vx (%d) = Vx + kk(%d).", e.v[x], kk)
 		e.v[x] += uint8(kk)
-		log.Printf("e.V[x]: %d %04x", e.v[x], e.v[x])
 		e.pc += 2
 	case 0x8000:
 		switch n {
 		case 0x0000:
-			log.Print("Set Vx = Vy.")
 			e.v[x] = e.v[y]
-			log.Printf("e.V[x]: %d %04x", e.v[x], e.v[x])
 		case 0x0001:
-			log.Print("Set Vx = Vx OR Vy.")
 			e.v[x] |= e.v[y]
 		case 0x0002:
-			log.Print("Set Vx = Vx AND Vy.")
 			e.v[x] &= e.v[y]
 		case 0x0003:
-			log.Print("Set Vx = Vx XOR Vy.")
 			e.v[x] ^= e.v[y]
 		case 0x0004:
-			log.Print("Set Vx = Vx + Vy, set VF = carry")
 			if int(e.v[x])+int(e.v[y]) > 255 {
 				e.v[0xF] = 1
 			} else {
 				e.v[0xF] = 0
 			}
 			e.v[x] += e.v[y]
-			log.Printf("e.V[x]: %d %04x", e.v[x], e.v[x])
 		case 0x0005:
-			log.Printf("Set Vx = Vx - Vy, set VF = NOT borrow.")
 			if e.v[x] > e.v[y] {
 				e.v[0xF] = 1
 			} else {
 				e.v[0xF] = 0
 			}
 			e.v[x] -= e.v[y]
-			log.Printf("e.V[x]: %d %04x", e.v[x], e.v[x])
 		case 0x0006:
-			log.Print("Set Vx = Vx SHR 1.")
 			e.v[0xF] = e.v[x] & 0x1
 			e.v[x] >>= 1
-			log.Printf("e.V[x]: %d %04x", e.v[x], e.v[x])
 		case 0x0007:
-			log.Print("Set Vx = Vy - Vx, set VF = NOT borrow.")
 			if e.v[y] > e.v[x] {
 				e.v[0xF] = 1
 			} else {
 				e.v[0xF] = 0
 			}
 			e.v[x] = e.v[y] - e.v[x]
-			log.Printf("e.V[x]: %d %04x", e.v[x], e.v[x])
 		case 0x000E:
-			log.Print("Set Vx = Vx SHL 1.")
 			e.v[0xF] = (e.v[x] >> 7) & 0x1
 			e.v[x] <<= 1
-			log.Printf("e.V[x]: %d %04x", e.v[x], e.v[x])
 		}
 		e.pc += 2
 	case 0x9000:
-		log.Print("Skip next instruction if Vx != Vy.")
 		if n == 0x0 {
 			if e.v[x] != e.v[y] {
 				e.pc += 4
@@ -256,25 +227,19 @@ func (e *Emulator) EmulateCycle() {
 			}
 		}
 	case 0xa000:
-		log.Print("Set I = nnn.")
 		e.i = nnn
 		e.pc += 2
 	case 0xb000:
-		log.Print("Jump to location nnn + V0")
 		e.pc = nnn + uint16(e.v[0])
 	case 0xc000:
-		log.Print("Set Vx = random byte AND kk.")
 		e.v[x] = uint8(rand.Intn(255)) & uint8(kk)
-		log.Printf("e.V[x]: %d %04x", e.v[x], e.v[x])
 		e.pc += 2
 	case 0xd000:
-		log.Printf("Display n(%d)-byte sprite starting at memory location I(%d) at (Vx:%d, Vy:%d), set VF = collision.", n, e.i, e.v[x], e.v[y])
 
 		e.v[0xF] = 0
 		for row := 0; row < int(n); row++ {
 			y := int(e.v[y]) + row
 			bt := e.ram[int(e.i)+row]
-			log.Printf("byte: %08b", bt)
 
 			for col := 0; col < 8; col++ {
 				x := int(e.v[x]) + col
@@ -293,14 +258,12 @@ func (e *Emulator) EmulateCycle() {
 	case 0xe000:
 		switch kk {
 		case 0x009e:
-			log.Print("Skip next instruction if key with the value of Vx is pressed.")
 			if e.keys[e.v[x]] > 0 {
 				e.pc += 4
 			} else {
 				e.pc += 2
 			}
 		case 0x00a1:
-			log.Print("Skip next instruction if key with the value of Vx is not pressed.")
 			if e.keys[e.v[x]] == 0 {
 				e.pc += 4
 			} else {
@@ -313,22 +276,18 @@ func (e *Emulator) EmulateCycle() {
 		// Set Vx = delay timer value.
 		// The value of DT is placed into Vx.
 		case 0x0007:
-			log.Print("Set Vx = delay timer value.")
 			e.v[x] = e.dt
-			log.Printf("e.V[x]: %d %04x", e.v[x], e.v[x])
 			e.pc += 2
 
 		// Fx0A - LD Vx, K
 		// Wait for a key press, store the value of the key in Vx.
 		// All execution stops until a key is pressed, then the value of that key is stored in Vx.
 		case 0x000a:
-			log.Print("Wait for a key press, store the value of the key in Vx.")
 			ticker := time.NewTicker(10 * time.Millisecond)
 			for range ticker.C {
 				keyPressed := -1
 				for i, k := range e.keys {
 					if k > 0 {
-						log.Printf("got key press: %d", i)
 						keyPressed = i
 						break
 					}
@@ -339,7 +298,6 @@ func (e *Emulator) EmulateCycle() {
 				}
 
 				e.v[x] = uint8(keyPressed)
-				log.Printf("e.V[x]: %d %04x", e.v[x], e.v[x])
 				ticker.Stop()
 				break
 			}
