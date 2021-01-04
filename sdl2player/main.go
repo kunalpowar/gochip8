@@ -67,7 +67,7 @@ func main() {
 
 	running := true
 	for running {
-		c.RunCycles(1)
+		c.RunOnce()
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
 			switch event.(type) {
 			case *sdl.QuitEvent:

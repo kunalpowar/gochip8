@@ -37,3 +37,8 @@ func (c *Chip8) RunCycles(limit int) {
 		}
 	}
 }
+
+// RunCycles runs just 1 emulator cycle
+func (c *Chip8) RunOnce() {
+	c.RunCycles(1)
+}
