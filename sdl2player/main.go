@@ -73,6 +73,12 @@ func (s sdlKeyboard) PressedKeys() map[int]bool {
 
 var rom = flag.String("rom", "roms/Chip8 Picture.ch8", "-rom path_to_rom")
 
+const (
+	displayScale = 2
+	c8DispWidth  = 64
+	c8DispHeight = 32
+)
+
 func main() {
 	flag.Parse()
 	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
@@ -80,18 +86,11 @@ func main() {
 	}
 	defer sdl.Quit()
 
-	window, err := sdl.CreateWindow("test", sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, 64, 32, sdl.WINDOW_SHOWN)
+	window, err := sdl.CreateWindow("test", sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, c8DispWidth, c8DispHeight, sdl.WINDOW_SHOWN)
 	if err != nil {
 		panic(err)
 	}
 	defer window.Destroy()
-
-	surface, err := window.GetSurface()
-	if err != nil {
-		panic(err)
-	}
-	surface.FillRect(nil, 0)
-	window.UpdateSurface()
 
 	kb := sdlKeyboard{pressedKeys: make(map[int]bool)}
 	c := chip8.New(sdlDisplay{window: window}, &kb, nil)
