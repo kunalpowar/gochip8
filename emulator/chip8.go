@@ -4,7 +4,6 @@ import (
 	"image"
 	"image/color"
 	"image/gif"
-	"image/png"
 	"io"
 	"io/ioutil"
 	"log"
@@ -13,33 +12,9 @@ import (
 	"time"
 )
 
-// Reference: http://devernay.free.fr/hacks/chip8/C8TECH10.HTM
-
-/*
-Memory Map:
-+---------------+= 0xFFF (4095) End of Chip-8 RAM
-|               |
-|               |
-|               |
-|               |
-|               |
-| 0x200 to 0xFFF|
-|     Chip-8    |
-| Program / Data|
-|     Space     |
-|               |
-|               |
-|               |
-+- - - - - - - -+= 0x600 (1536) Start of ETI 660 Chip-8 programs
-|               |
-|               |
-|               |
-+---------------+= 0x200 (512) Start of most Chip-8 programs
-| 0x000 to 0x1FF|
-| Reserved for  |
-|  interpreter  |
-+---------------+= 0x000 (0) Start of Chip-8 RAM
-*/
+// References:
+// http://devernay.free.fr/hacks/chip8/C8TECH10.HTM
+// http://www.multigesture.net/articles/how-to-write-an-emulator-chip-8-interpreter/
 
 const (
 	interpreterStart  = 0x000
@@ -97,41 +72,18 @@ type Emulator struct {
 	displayUpdated bool
 }
 
-func (e *Emulator) dumpRAMImage() {
-	f, err := os.Create("out.png")
-	if err != nil {
-		log.Fatalf("could not create dump image: %v", err)
-	}
-	defer f.Close()
-
-	im := image.NewRGBA(image.Rectangle{Min: image.Pt(0, 0), Max: image.Pt(8, 4096)})
-
-	for i, b := range e.RAM {
-		var bit uint8
-		for bit = 0; bit < 8; bit++ {
-			if b&(1<<(7-bit)) > 0 {
-				log.Printf("setting (%d,%d) to white", i, int(bit))
-				im.Set(int(bit), i, color.White)
-			} else {
-				log.Printf("setting (%d,%d) to black", i, int(bit))
-				im.Set(int(bit), i, color.Black)
-			}
-		}
-	}
-
-	if err := png.Encode(f, im); err != nil {
-		log.Fatalf("could not encode png: %v", err)
-	}
-}
-
-// Run runs the emulator
-func Run(r io.Reader) {
-	var e Emulator
-	e.PC = programStart
+// New returns a new instance of emulator ready to load programs
+func New() *Emulator {
+	e := Emulator{PC: programStart}
 	for i, b := range fontSet {
 		e.RAM[interpreterStart+i] = b
 	}
 
+	return &e
+}
+
+// LoadROM takes a rom io.reader to load to memory
+func (e *Emulator) LoadROM(r io.Reader) {
 	bs, err := ioutil.ReadAll(r)
 	if err != nil {
 		log.Fatalf("could not read from rom: %v", err)
@@ -141,8 +93,11 @@ func Run(r io.Reader) {
 		e.RAM[programStart+i] = b
 	}
 
-	// e.dumpRAMImage()
+	log.Printf("emulator: loaded %d bytes of rom into memory", len(bs))
+}
 
+// Run runs the emulator
+func (e *Emulator) Run() {
 	palette := []color.Color{color.White, color.Black}
 	rect := image.Rect(0, 0, 64, 32)
 
@@ -152,18 +107,11 @@ func Run(r io.Reader) {
 	)
 
 	for i := 0; i < 1000; i++ {
-		e.runNextOp()
-		if e.DT > 0 {
-			e.DT--
-		}
-		if e.ST > 0 {
-			print("beep..")
-			e.ST--
-		}
+		e.displayUpdated = false
+		e.emulateCycle()
+		e.updateTimers()
 
 		if e.displayUpdated {
-			log.Print("need to update display")
-
 			img := image.NewPaletted(rect, palette)
 			for y, rowData := range e.Display {
 				for x := 0; x < 64; x++ {
@@ -191,6 +139,17 @@ func Run(r io.Reader) {
 	}
 }
 
+func (e *Emulator) updateTimers() {
+	if e.DT > 0 {
+		e.DT--
+	}
+
+	if e.ST > 0 {
+		print("beep..")
+		e.ST--
+	}
+}
+
 func (e *Emulator) clearDisplay() {
 	for i := range e.Display {
 		e.Display[i] = 0x00
@@ -206,7 +165,7 @@ func (e *Emulator) getPixel(x, y int) int {
 	return int(e.Display[y] & ((0x1 << 63) >> x))
 }
 
-func (e *Emulator) runNextOp() {
+func (e *Emulator) emulateCycle() {
 	var opcode uint16
 	opcode = uint16(e.RAM[e.PC])<<8 | uint16(e.RAM[e.PC+1])
 
@@ -224,8 +183,6 @@ func (e *Emulator) runNextOp() {
 	)
 
 	log.Printf("opcode: %04x, PC: %04x", opcode, e.PC)
-
-	e.displayUpdated = false
 
 	switch opcode & 0xf000 {
 	case 0x0000:
