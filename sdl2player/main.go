@@ -103,7 +103,7 @@ func main() {
 	window.UpdateSurface()
 
 	kb := SDLKeyboard{pressedKeys: make(map[int]bool)}
-	c := chip8.New(SDLWindow{window: window}, &kb)
+	c := chip8.New(SDLWindow{window: window}, &kb, nil)
 
 	flag.Parse()
 	f, err := os.Open(*rom)

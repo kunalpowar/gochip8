@@ -14,12 +14,12 @@ type Chip8 struct {
 	speaker  Speaker
 }
 
-func New(disp Display, kb Keyboard) *Chip8 {
+func New(disp Display, kb Keyboard, sp Speaker) *Chip8 {
 	if disp == nil {
 		log.Fatalf("chip8: need a non-empty display")
 	}
 
-	return &Chip8{emulator: emulator.New(), display: disp, keyboard: kb}
+	return &Chip8{emulator: emulator.New(), display: disp, keyboard: kb, speaker: sp}
 }
 
 func (c *Chip8) LoadROM(r io.Reader) {
@@ -37,6 +37,7 @@ func (c *Chip8) RunCycles(limit int) {
 // RunCycles runs just 1 emulator cycle
 func (c *Chip8) RunOnce() {
 	c.emulator.UpdateDisplay = false
+
 	c.emulator.EmulateCycle()
 
 	if c.emulator.UpdateDisplay {
