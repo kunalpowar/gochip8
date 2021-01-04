@@ -114,10 +114,24 @@ func (e *Emulator) clearDisplay() {
 }
 
 func (e *Emulator) togglePixel(x, y int) {
+	if x >= 64 {
+		x = x % 64
+	}
+	if y >= 32 {
+		y = y % 32
+	}
+
 	e.Display[y] ^= ((0x1 << 63) >> x)
 }
 
 func (e *Emulator) getPixel(x, y int) int {
+	if x >= 64 {
+		x = x % 64
+	}
+	if y >= 32 {
+		y = y % 32
+	}
+
 	return int(e.Display[y] & ((0x1 << 63) >> x))
 }
 
