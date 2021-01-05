@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	chip8 "github.com/kunalpowar/gochip8"
+	"github.com/kunalpowar/gochip8/pkg/chip8"
 	"github.com/veandco/go-sdl2/sdl"
 )
 

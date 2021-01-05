@@ -4,7 +4,7 @@ import (
 	"io"
 	"log"
 
-	"github.com/kunalpowar/gochip8/emulator"
+	"github.com/kunalpowar/gochip8/pkg/emulator"
 )
 
 // Chip8 packages all the intefaces and the emulator itself.

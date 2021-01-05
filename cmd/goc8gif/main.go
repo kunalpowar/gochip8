@@ -8,7 +8,7 @@ import (
 	"log"
 	"os"
 
-	chip8 "github.com/kunalpowar/gochip8"
+	"github.com/kunalpowar/gochip8/pkg/chip8"
 )
 
 var rom = flag.String("rom", "roms/Chip8 Picture.ch8", "-rom path_to_rom")
