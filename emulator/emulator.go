@@ -141,6 +141,7 @@ func (e *Emulator) getPixelValue(p DispLocation) int {
 }
 
 // EmulateCycle runs the next opcode and updates the timers accordingly
+// gocyclo:ignore (added to ignore cyclomatic complexities on this function)
 func (e *Emulator) EmulateCycle() {
 	var opcode uint16
 	opcode = uint16(e.ram[e.pc])<<8 | uint16(e.ram[e.pc+1])
