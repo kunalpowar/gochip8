@@ -13,7 +13,7 @@ Pet project to write a Chip-8 emulator with go.
 
 ## Description
 
-The idea of the repository is to provide a chip8 emulator to be used with any display, keyboard and speaker interface. This is done using by satisfying the interfaces as shown below.
+The idea of the repository is to provide a chip8 emulator to be used with any display, keyboard and speaker interface. This is done by satisfying the interfaces as shown below.
 
 ```go
 // Display defines the interface required
@@ -60,7 +60,11 @@ c.RunOnce()
 ## Examples
 
 ### SDL2 Player
-Refer to [`sdl2player`](/sdl2player) to which uses [sdl2](https://github.com/veandco/go-sdl2) based Display and Keyboard.
+Refer to [`goc8sdl`](/cmd/goc8sdl/main.go) which uses [sdl2](https://github.com/veandco/go-sdl2) based Display and Keyboard.
 
 ### GIF
-This is a sample code to generate a gif of the display by using the `Display` interface. The code runs the emulator for 1000 cycles to generate a gif.
+Refer to [`goc8gif`](/cmd/goc8gif/main.go) which takes advantage of the `Display` interface to output a gif of running 1000 cycles.
+
+## TODOs and Experiments
+* Update sdl cmd with sound device
+* WASM support?
