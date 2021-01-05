@@ -77,11 +77,11 @@ func (c *Chip8) setKeys() {
 }
 
 func (c *Chip8) updateDisplay() {
-	for _, pix := range c.emulator.ClearedPixels {
-		c.display.ClearPixel(pix.X, pix.Y)
+	for _, loc := range c.emulator.ClearedLocations {
+		c.display.ClearPixel(loc.X, loc.Y)
 	}
-	for _, pix := range c.emulator.SetPixels {
-		c.display.SetPixel(pix.X, pix.Y)
+	for _, loc := range c.emulator.SetLocations {
+		c.display.SetPixel(loc.X, loc.Y)
 	}
 
 	c.display.DrawFrame()

@@ -70,19 +70,12 @@ type Emulator struct {
 	UpdateDisplay bool
 
 	// Helper flags for efficient rendering
-	ClearDisplay  bool
-	ClearedPixels []Pixel
-	SetPixels     []Pixel
+	ClearDisplay     bool
+	ClearedLocations []DispLocation
+	SetLocations     []DispLocation
 
 	// Beep when set to true
 	Beep bool
-}
-
-// Pixel represents one pixel on the 64X32 display
-type Pixel struct{ X, Y int }
-
-func dispPix(x, y int) Pixel {
-	return Pixel{X: x % 64, Y: y % 32}
 }
 
 // New returns a new instance of emulator ready to load programs
@@ -132,11 +125,18 @@ func (e *Emulator) clearDisplay() {
 	e.ClearDisplay = true
 }
 
-func (e *Emulator) togglePixel(p Pixel) {
+// DispLocation represents one pixel on the 64X32 display
+type DispLocation struct{ X, Y int }
+
+func newDispLocation(x, y int) DispLocation {
+	return DispLocation{X: x % 64, Y: y % 32}
+}
+
+func (e *Emulator) togglePixel(p DispLocation) {
 	e.Display[p.Y] ^= ((0x1 << 63) >> p.X)
 }
 
-func (e *Emulator) getPixel(p Pixel) int {
+func (e *Emulator) getPixelValue(p DispLocation) int {
 	return int(e.Display[p.Y] & ((0x1 << 63) >> p.X))
 }
 
@@ -145,8 +145,8 @@ func (e *Emulator) EmulateCycle() {
 	var opcode uint16
 	opcode = uint16(e.ram[e.pc])<<8 | uint16(e.ram[e.pc+1])
 
-	e.ClearedPixels = make([]Pixel, 0)
-	e.SetPixels = make([]Pixel, 0)
+	e.ClearedLocations = make([]DispLocation, 0)
+	e.SetLocations = make([]DispLocation, 0)
 	e.UpdateDisplay = false
 	e.ClearDisplay = false
 
@@ -271,14 +271,14 @@ func (e *Emulator) EmulateCycle() {
 			for col := 0; col < 8; col++ {
 				x := int(e.v[x]) + col
 
-				pix := e.getPixel(dispPix(x, y))
+				pix := e.getPixelValue(newDispLocation(x, y))
 				if bt&(0x80>>col) != 0 {
-					e.togglePixel(dispPix(x, y))
+					e.togglePixel(newDispLocation(x, y))
 					if pix != 0 {
 						e.v[0xF] = 1
-						e.ClearedPixels = append(e.ClearedPixels, dispPix(x, y))
+						e.ClearedLocations = append(e.ClearedLocations, newDispLocation(x, y))
 					} else {
-						e.SetPixels = append(e.SetPixels, dispPix(x, y))
+						e.SetLocations = append(e.SetLocations, newDispLocation(x, y))
 					}
 				}
 			}
