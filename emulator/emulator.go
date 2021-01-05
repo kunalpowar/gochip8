@@ -81,16 +81,8 @@ type Emulator struct {
 // Pixel represents one pixel on the 64X32 display
 type Pixel struct{ X, Y int }
 
-func overflowCorrectedPixel(x, y int) Pixel {
-	p := Pixel{X: x, Y: y}
-	if p.X >= 64 {
-		p.X = p.X % 64
-	}
-	if p.Y >= 32 {
-		p.Y = p.Y % 32
-	}
-
-	return p
+func dispPix(x, y int) Pixel {
+	return Pixel{X: x % 64, Y: y % 32}
 }
 
 // New returns a new instance of emulator ready to load programs
@@ -99,6 +91,8 @@ func New() *Emulator {
 	for i, b := range fontSet {
 		e.ram[interpreterStart+i] = b
 	}
+
+	rand.Seed(time.Now().Unix())
 
 	return &e
 }
@@ -138,26 +132,12 @@ func (e *Emulator) clearDisplay() {
 	e.ClearDisplay = true
 }
 
-func (e *Emulator) togglePixel(x, y int) {
-	if x >= 64 {
-		x = x % 64
-	}
-	if y >= 32 {
-		y = y % 32
-	}
-
-	e.Display[y] ^= ((0x1 << 63) >> x)
+func (e *Emulator) togglePixel(p Pixel) {
+	e.Display[p.Y] ^= ((0x1 << 63) >> p.X)
 }
 
-func (e *Emulator) getPixel(x, y int) int {
-	if x >= 64 {
-		x = x % 64
-	}
-	if y >= 32 {
-		y = y % 32
-	}
-
-	return int(e.Display[y] & ((0x1 << 63) >> x))
+func (e *Emulator) getPixel(p Pixel) int {
+	return int(e.Display[p.Y] & ((0x1 << 63) >> p.X))
 }
 
 // EmulateCycle runs the next opcode and updates the timers accordingly
@@ -176,11 +156,11 @@ func (e *Emulator) EmulateCycle() {
 	// y - A 4-bit value, the upper 4 bits of the low byte of the instruction
 	// kk or byte - An 8-bit value, the lowest 8 bits of the instruction
 	var (
-		nnn = opcode & 0x0fff
-		n   = opcode & 0x000f
-		x   = (opcode >> 8) & 0x000f
-		y   = (opcode >> 4) & 0x000f
-		kk  = opcode & 0x00ff
+		nnn       = opcode & 0x0fff
+		n   uint8 = uint8(opcode & 0x000f)
+		x   uint8 = uint8((opcode >> 8) & 0x000f)
+		y   uint8 = uint8((opcode >> 4) & 0x000f)
+		kk  uint8 = uint8(opcode & 0x00ff)
 	)
 
 	switch opcode & 0xf000 {
@@ -190,23 +170,23 @@ func (e *Emulator) EmulateCycle() {
 			e.clearDisplay()
 			e.pc += 2
 		case 0x00EE:
-			e.pc = e.stack[e.sp]
 			e.sp--
+			e.pc = e.stack[e.sp]
 		}
 	case 0x1000:
 		e.pc = nnn
 	case 0x2000:
-		e.sp++
 		e.stack[e.sp] = e.pc + 2
+		e.sp++
 		e.pc = nnn
 	case 0x3000:
-		if uint16(e.v[x]) == kk {
+		if e.v[x] == kk {
 			e.pc += 4
 		} else {
 			e.pc += 2
 		}
 	case 0x4000:
-		if uint16(e.v[x]) != kk {
+		if e.v[x] != kk {
 			e.pc += 4
 		} else {
 			e.pc += 2
@@ -218,10 +198,10 @@ func (e *Emulator) EmulateCycle() {
 			e.pc += 2
 		}
 	case 0x6000:
-		e.v[x] = uint8(kk)
+		e.v[x] = kk
 		e.pc += 2
 	case 0x7000:
-		e.v[x] += uint8(kk)
+		e.v[x] += kk
 		e.pc += 2
 	case 0x8000:
 		switch n {
@@ -260,6 +240,8 @@ func (e *Emulator) EmulateCycle() {
 		case 0x000E:
 			e.v[0xF] = (e.v[x] >> 7) & 0x1
 			e.v[x] <<= 1
+		default:
+			log.Fatalf("unknown opcode: %04x", e.pc)
 		}
 		e.pc += 2
 	case 0x9000:
@@ -269,6 +251,8 @@ func (e *Emulator) EmulateCycle() {
 			} else {
 				e.pc += 2
 			}
+		} else {
+			log.Fatalf("unknown opcode: %04x", e.pc)
 		}
 	case 0xa000:
 		e.i = nnn
@@ -276,10 +260,9 @@ func (e *Emulator) EmulateCycle() {
 	case 0xb000:
 		e.pc = nnn + uint16(e.v[0])
 	case 0xc000:
-		e.v[x] = uint8(rand.Intn(255)) & uint8(kk)
+		e.v[x] = uint8(rand.Intn(255)) & kk
 		e.pc += 2
 	case 0xd000:
-
 		e.v[0xF] = 0
 		for row := 0; row < int(n); row++ {
 			y := int(e.v[y]) + row
@@ -288,14 +271,14 @@ func (e *Emulator) EmulateCycle() {
 			for col := 0; col < 8; col++ {
 				x := int(e.v[x]) + col
 
-				pix := e.getPixel(x, y)
+				pix := e.getPixel(dispPix(x, y))
 				if bt&(0x80>>col) != 0 {
-					e.togglePixel(x, y)
+					e.togglePixel(dispPix(x, y))
 					if pix != 0 {
 						e.v[0xF] = 1
-						e.ClearedPixels = append(e.ClearedPixels, overflowCorrectedPixel(x, y))
+						e.ClearedPixels = append(e.ClearedPixels, dispPix(x, y))
 					} else {
-						e.SetPixels = append(e.SetPixels, overflowCorrectedPixel(x, y))
+						e.SetPixels = append(e.SetPixels, dispPix(x, y))
 					}
 				}
 			}
@@ -304,33 +287,30 @@ func (e *Emulator) EmulateCycle() {
 		e.pc += 2
 	case 0xe000:
 		switch kk {
-		case 0x009e:
-			if e.Keys[e.v[x]] > 0 {
+		case 0x9e:
+			if e.Keys[e.v[x]] != 0 {
 				e.pc += 4
 			} else {
 				e.pc += 2
 			}
-		case 0x00a1:
+		case 0xa1:
 			if e.Keys[e.v[x]] == 0 {
 				e.pc += 4
 			} else {
 				e.pc += 2
 			}
+		default:
+			log.Fatalf("unknown opcode: %04x", e.pc)
 		}
 	case 0xf000:
 		switch kk {
-		// Fx07 - LD Vx, DT
-		// Set Vx = delay timer value.
-		// The value of DT is placed into Vx.
-		case 0x0007:
+		case 0x07:
 			e.v[x] = e.dt
 			e.pc += 2
 
-		// Fx0A - LD Vx, K
-		// Wait for a key press, store the value of the key in Vx.
-		// All execution stops until a key is pressed, then the value of that key is stored in Vx.
-		case 0x000a:
-			ticker := time.NewTicker(10 * time.Millisecond)
+		case 0x0a:
+			ticker := time.NewTicker(1 * time.Millisecond)
+			log.Printf("emulator: waiting for key stroke...")
 			for range ticker.C {
 				keyPressed := -1
 				for i, k := range e.Keys {
@@ -348,28 +328,19 @@ func (e *Emulator) EmulateCycle() {
 				ticker.Stop()
 				break
 			}
-
+			log.Printf("emulator: got key stroke")
 			e.pc += 2
 
-		// Fx15 - LD DT, Vx
-		// Set delay timer = Vx.
-		// DT is set equal to the value of Vx.
-		case 0x0015:
+		case 0x15:
 			e.dt = e.v[x]
 			e.pc += 2
 
-		// Fx18 - LD ST, Vx
-		// Set sound timer = Vx.
-		// ST is set equal to the value of Vx.
-		case 0x0018:
+		case 0x18:
 			e.st = e.v[x]
 			e.pc += 2
 
-		// Fx1E - ADD I, Vx
-		// Set I = I + Vx.
-		// The values of I and Vx are added, and the results are stored in I.
-		case 0x001e:
-			if int(e.i)+int(e.v[x]) > 255 {
+		case 0x1e:
+			if (e.i + uint16(e.v[x])) > 0xfff {
 				e.v[0xf] = 1
 			} else {
 				e.v[0xf] = 0
@@ -377,60 +348,38 @@ func (e *Emulator) EmulateCycle() {
 			e.i += uint16(e.v[x])
 			e.pc += 2
 
-		// Fx29 - LD F, Vx
-		// Set I = location of sprite for digit Vx.
-		// The value of I is set to the location for the hexadecimal sprite corresponding to the value of Vx. See section 2.4, Display, for more information on the Chip-8 hexadecimal font.
-		case 0x0029:
+		case 0x29:
 			e.i = uint16(bytesPerCharacter) * uint16(e.v[x])
 			e.pc += 2
 
-		// Fx33 - LD B, Vx
-		// Store BCD representation of Vx in memory locations I, I+1, and I+2.
-		// The interpreter takes the decimal value of Vx, and places the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2.
-		case 0x0033:
+		case 0x33:
 			intVal := int(e.v[x])
-			if intVal > 100 {
-				e.ram[e.i] = uint8((intVal % 1000) / 100)
-				e.ram[e.i+1] = uint8((intVal % 100) / 10)
-				e.ram[e.i+2] = uint8(intVal % 10)
-			} else if intVal > 10 {
-				e.ram[e.i] = 0
-				e.ram[e.i+1] = uint8((intVal % 100) / 10)
-				e.ram[e.i+2] = uint8(intVal % 10)
-			} else {
-				e.ram[e.i] = 0
-				e.ram[e.i+1] = 0
-				e.ram[e.i+2] = uint8(intVal)
-			}
+			e.ram[e.i] = uint8((intVal % 1000) / 100)
+			e.ram[e.i+1] = uint8((intVal % 100) / 10)
+			e.ram[e.i+2] = uint8(intVal % 10)
 			e.pc += 2
 
-		// Fx55 - LD [I], Vx
-		// Store registers V0 through Vx in memory starting at location I.
-		// The interpreter copies the values of registers V0 through Vx into memory, starting at the address in I.
-		case 0x0055:
-			var i uint16
+		case 0x55:
+			var i uint8
 			for i = 0; i < x; i++ {
-				e.ram[e.i+i] = e.v[i]
+				e.ram[uint8(e.i&0xff)+i] = e.v[i]
 			}
-			e.i += x + 1
+			e.i += uint16(x + 1)
 			e.pc += 2
 
-		// Fx65 - LD Vx, [I]
-		// Read registers V0 through Vx from memory starting at location I.
-		// The interpreter reads values from memory starting at location I into registers V0 through Vx.
-		case 0x0065:
-			var i uint16
+		case 0x65:
+			var i uint8
 			for i = 0; i < x; i++ {
-				e.v[i] = e.ram[e.i+i]
+				e.v[i] = e.ram[uint8(e.i&0xff)+i]
 			}
-			e.i += x + 1
+			e.i += uint16(x + 1)
 			e.pc += 2
 		default:
-			log.Fatalf("unknown opcode")
+			log.Fatalf("unknown opcode: %04x", e.pc)
 		}
 
 	default:
-		log.Fatalf("unrecognised opcode")
+		log.Fatalf("unknown opcode: %04x", e.pc)
 	}
 
 	e.updateTimers()
