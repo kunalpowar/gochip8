@@ -64,7 +64,7 @@ type Emulator struct {
 
 	Keys [16]uint8
 
-	// Display holds the data abotu current display state
+	// Display holds the data about current display state
 	Display [32]uint64
 	// UpdateDisplay is set if display frame needs to be updated.
 	UpdateDisplay bool

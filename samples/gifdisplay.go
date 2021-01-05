@@ -55,6 +55,8 @@ func newPalettedImage() *image.Paletted {
 	return image.NewPaletted(rect, palette)
 }
 
+// DrawFrame will add the currentframe as an image to the list
+// to be encoded as gif the end.
 func (d *GIFDisplay) DrawFrame() {
 	if d.currentFrame == nil {
 		return
@@ -74,14 +76,17 @@ func (d *GIFDisplay) DrawFrame() {
 	d.currentFrame = img
 }
 
+// ClearPixel will set the pixel at location to black.
 func (d *GIFDisplay) ClearPixel(x, y int) {
 	d.currentFrame.Set(x, y, color.Black)
 }
 
+// SetPixel will set the pixel at location to white.
 func (d *GIFDisplay) SetPixel(x, y int) {
 	d.currentFrame.Set(x, y, color.White)
 }
 
+// ClearAll will clear all pixels by using a new paletted image.
 func (d *GIFDisplay) ClearAll() {
 	d.currentFrame = newPalettedImage()
 }

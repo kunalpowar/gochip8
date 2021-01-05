@@ -21,10 +21,13 @@ type sdlDisplay struct {
 	window *sdl.Window
 }
 
+// DrawFrame will call the update surface which should update
+// the current frame with all the previous changes.
 func (d sdlDisplay) DrawFrame() {
 	d.window.UpdateSurface()
 }
 
+// ClearPixel will set the pixel at location to black.
 func (d sdlDisplay) ClearPixel(x, y int) {
 	surface, err := d.window.GetSurface()
 	if err != nil {
@@ -40,6 +43,7 @@ func (d sdlDisplay) ClearPixel(x, y int) {
 	}
 }
 
+// ClearPixel will set the pixel at location to white.
 func (d sdlDisplay) SetPixel(x, y int) {
 	surface, err := d.window.GetSurface()
 	if err != nil {
@@ -55,6 +59,7 @@ func (d sdlDisplay) SetPixel(x, y int) {
 	}
 }
 
+// ClearAll adds a black frame to the display.
 func (d sdlDisplay) ClearAll() {
 	surface, err := d.window.GetSurface()
 	if err != nil {
