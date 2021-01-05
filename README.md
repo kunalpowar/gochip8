@@ -1,5 +1,6 @@
 # Chip-8 Emulator with Go 
 [![Go Report Card](https://goreportcard.com/badge/github.com/kunalpowar/gochip8)](https://goreportcard.com/report/github.com/kunalpowar/gochip8)
+[![Go Reference](https://pkg.go.dev/badge/github.com/kunalpowar/gochip8.svg)](https://pkg.go.dev/github.com/kunalpowar/gochip8)
 
 Pet project to write a Chip-8 emulator with go.
 
