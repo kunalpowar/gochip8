@@ -46,6 +46,7 @@ func (c *Chip8) RunOnce() {
 	}
 	if c.emulator.ClearDisplay {
 		c.display.ClearAll()
+		c.display.DrawFrame()
 	}
 
 	c.setKeys()
